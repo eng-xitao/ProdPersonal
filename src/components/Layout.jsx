@@ -2,14 +2,23 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/AuthContext";
 
 const NAV = [
+  { to: "/dashboard", label: "Dashboard", icon: "📊" },
   { to: "/avaliacoes", label: "Avaliação de Desempenho", icon: "★" },
+  { to: "/avaliacao-comportamental", label: "Avaliação Comportamental", icon: "🧭" },
   { to: "/competencias", label: "Competências", icon: "◆" },
+  { to: "/descricao-cargos", label: "Descrição de Cargos", icon: "📄" },
   { to: "/pdi", label: "PDI", icon: "📈" },
   { to: "/metas", label: "Metas e KPIs", icon: "🎯" },
   { to: "/carreira", label: "Plano de Carreira", icon: "🪜" },
   { to: "/sucessao", label: "Plano de Sucessão", icon: "👥" },
   { to: "/treinamentos", label: "Treinamentos", icon: "🎓" },
   { to: "/vagas", label: "Recrutamento", icon: "📋" },
+  { to: "/remuneracao", label: "Remuneração", icon: "💵" },
+  { to: "/folha-pagamento", label: "Folha de Pagamento", icon: "🧾" },
+  { to: "/ferias", label: "Controle de Férias", icon: "🏖️" },
+  { to: "/rescisao", label: "Cálculo de Rescisão", icon: "📤" },
+  { to: "/config-inss", label: "Tabela de INSS", icon: "⚙️" },
+  { to: "/config-irrf", label: "Tabela de IRRF", icon: "⚙️" },
   { to: "/assinatura", label: "Assinatura", icon: "◈" },
 ];
 
