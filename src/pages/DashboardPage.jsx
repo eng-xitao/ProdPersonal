@@ -5,6 +5,7 @@ import { useAuth } from "../lib/AuthContext";
 export default function DashboardPage() {
   const { company } = useAuth();
   const [stats, setStats] = useState(null);
+  const [birthdays, setBirthdays] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,6 +18,7 @@ export default function DashboardPage() {
         { count: upcomingVacations },
         { count: openVacancies },
         { data: lastRun },
+        { data: allEmployees },
       ] = await Promise.all([
         supabase.from("employees").select("id", { count: "exact", head: true }).eq("status", "ativo"),
         supabase.from("hr_performance_evaluations").select("id", { count: "exact", head: true }).eq("status", "aberta"),
@@ -24,8 +26,16 @@ export default function DashboardPage() {
         supabase.from("hr_vacations").select("id", { count: "exact", head: true }).eq("status", "agendada"),
         supabase.from("hr_vacancies").select("id", { count: "exact", head: true }).eq("status", "aberta"),
         supabase.from("hr_payroll_runs").select("competencia, status").order("competencia", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("employees").select("full_name, birth_date").eq("status", "ativo").not("birth_date", "is", null),
       ]);
       setStats({ totalEmployees, openEvaluations, pendingPdi, upcomingVacations, openVacancies, lastRun });
+
+      const currentMonth = new Date().getMonth();
+      const monthBirthdays = (allEmployees ?? [])
+        .filter((e) => new Date(e.birth_date + "T00:00:00").getMonth() === currentMonth)
+        .sort((a, b) => new Date(a.birth_date).getDate() - new Date(b.birth_date).getDate());
+      setBirthdays(monthBirthdays);
+
       setLoading(false);
     })();
   }, [company?.id]);
@@ -61,6 +71,19 @@ export default function DashboardPage() {
           Última folha de pagamento: {new Date(stats.lastRun.competencia + "T00:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" })} — {stats.lastRun.status === "aberta" ? "aberta" : "fechada"}
         </p>
       )}
+
+      {birthdays.length > 0 && (
+        <div style={styles.birthdayBox}>
+          <p style={styles.birthdayTitle}>🎂 Aniversariantes do mês</p>
+          <ul style={styles.birthdayList}>
+            {birthdays.map((b) => (
+              <li key={b.full_name} style={styles.birthdayItem}>
+                {new Date(b.birth_date + "T00:00:00").getDate().toString().padStart(2, "0")} — {b.full_name}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
@@ -73,4 +96,8 @@ const styles = {
   card: { background: "var(--panel)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: "18px 16px", display: "flex", flexDirection: "column", gap: 4 },
   cardValue: { fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 800 },
   cardLabel: { fontSize: 12, color: "var(--text-dim)" },
+  birthdayBox: { marginTop: 24, background: "var(--panel)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: 18, maxWidth: 420 },
+  birthdayTitle: { fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 800, margin: "0 0 10px" },
+  birthdayList: { listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 },
+  birthdayItem: { fontSize: 13 },
 };

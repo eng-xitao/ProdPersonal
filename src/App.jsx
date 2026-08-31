@@ -14,6 +14,12 @@ import VagasPage from "./pages/VagasPage";
 import AssinaturaPage from "./pages/AssinaturaPage";
 import DashboardPage from "./pages/DashboardPage";
 import ColaboradoresPage from "./pages/ColaboradoresPage";
+import FichaColaboradorPage from "./pages/FichaColaboradorPage";
+import AvaliacaoExperienciaPage from "./pages/AvaliacaoExperienciaPage";
+import MuralPage from "./pages/MuralPage";
+import ClimaPage from "./pages/ClimaPage";
+import DenunciasPage from "./pages/DenunciasPage";
+import SugestoesPage from "./pages/SugestoesPage";
 import AvaliacaoComportamentalPage from "./pages/AvaliacaoComportamentalPage";
 import DescricaoCargosPage from "./pages/DescricaoCargosPage";
 import RemuneracaoPage from "./pages/RemuneracaoPage";
@@ -43,6 +49,12 @@ function PrivateArea() {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/colaboradores" element={<ColaboradoresPage />} />
+            <Route path="/colaboradores/:id" element={<FichaColaboradorPage />} />
+            <Route path="/avaliacao-experiencia" element={<AvaliacaoExperienciaPage />} />
+            <Route path="/mural" element={<MuralPage />} />
+            <Route path="/clima" element={<ClimaPage />} />
+            <Route path="/denuncias" element={<DenunciasPage />} />
+            <Route path="/sugestoes" element={<SugestoesPage />} />
             <Route path="/avaliacoes" element={<AvaliacoesPage />} />
             <Route path="/avaliacao-comportamental" element={<AvaliacaoComportamentalPage />} />
             <Route path="/competencias" element={<CompetenciasPage />} />
