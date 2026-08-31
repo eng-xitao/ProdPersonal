@@ -1,12 +1,7 @@
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 
-/**
- * Motor central de impressão administrativa do ProdPersonal.
- * Mantém compatibilidade com as páginas existentes e fornece um documento A4
- * separado da aplicação, com identidade corporativa e aviso de confidencialidade.
- */
-
+/** Central administrative print engine for ProdPersonal. */
 const CSS = `
 :root{--ink:#172033;--muted:#667085;--line:#dfe4eb;--soft:#f6f8fa;--soft2:#eef2f6;--accent:#344054}
 @page{size:A4;margin:15mm 14mm 18mm}
@@ -26,17 +21,23 @@ table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(
 
 function esc(value){return String(value??"").replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));}
 
+export function brandHeader(company="ProdOS", title="Documento", meta=[]){
+  const safeCompany=typeof company==="string"?company:(company?.name||company?.razao_social||"ProdOS");
+  const safeTitle=title||"Documento";
+  const fields=Array.isArray(meta)?meta.filter(Boolean).map(pair=>Array.isArray(pair)?`<div><strong>${esc(pair[0])}:</strong> ${esc(pair[1])}</div>`:`<div>${esc(pair)}</div>`).join(""):"";
+  return `<header class="document-header"><div class="brand-row"><div class="brand"><div class="brand-mark">P</div><div><div class="brand-name">${esc(safeCompany)}</div><div class="brand-sub">ProdPersonal • Gestão de Pessoas</div></div></div>${fields?`<div class="document-meta">${fields}</div>`:""}</div><div class="document-title"><h1>${esc(safeTitle)}</h1></div></header>`;
+}
+
 function buildDocument({title="Documento",subtitle="",company="ProdOS",content="",confidential=true,documentCode=""}={}){
  const now=new Date().toLocaleString("pt-BR");
  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>${CSS}</style></head><body><main class="document">
- <header class="document-header"><div class="brand-row"><div class="brand"><div class="brand-mark">P</div><div><div class="brand-name">${esc(company)}</div><div class="brand-sub">ProdPersonal • Gestão de Pessoas</div></div></div><div class="document-meta"><strong>DOCUMENTO CORPORATIVO</strong>${documentCode?`Código: ${esc(documentCode)}<br>`:""}Emissão: ${esc(now)}</div></div><div class="document-title"><h1>${esc(title)}</h1>${subtitle?`<p>${esc(subtitle)}</p>`:""}</div></header>
+ <header class="document-header"><div class="brand-row"><div class="brand"><div class="brand-mark">P</div><div><div class="brand-name">${esc(typeof company==="string"?company:(company?.name||"ProdOS"))}</div><div class="brand-sub">ProdPersonal • Gestão de Pessoas</div></div></div><div class="document-meta"><strong>DOCUMENTO CORPORATIVO</strong>${documentCode?`Código: ${esc(documentCode)}<br>`:""}Emissão: ${esc(now)}</div></div><div class="document-title"><h1>${esc(title)}</h1>${subtitle?`<p>${esc(subtitle)}</p>`:""}</div></header>
  ${confidential?'<div class="confidential">CONFIDENCIAL — USO RESTRITO AO RH/DP</div>':""}${content}<footer class="footer"><span>ProdPersonal • Documento administrativo</span><span>Emissão: ${esc(now)}</span></footer></main><script>window.addEventListener('load',()=>setTimeout(()=>window.print(),300));</script></body></html>`;
 }
 
 export function openPrintDocument(options={}){const win=window.open("","_blank","width=980,height=1200");if(!win){window.print();return null;}win.document.open();win.document.write(buildDocument(options));win.document.close();return win;}
 export function openPrintWindow(options={}){return openPrintDocument(options);}
 export function printDocument(title,content,subtitle=""){return openPrintDocument({title,subtitle,content});}
-export function brandHeader(title="Documento",subtitle=""){return `<div class="document-title"><h1>${esc(title)}</h1>${subtitle?`<p>${esc(subtitle)}</p>`:""}</div>`;}
 export function currency(value){const n=Number(value||0);return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});}
 export function formatDate(value){if(!value)return "—";const d=new Date(value);return Number.isNaN(d.getTime())?String(value):d.toLocaleDateString("pt-BR");}
 export function infoGrid(items=[]){return `<div class="info-grid">${items.filter(x=>x&&x.value!==undefined&&x.value!==null&&x.value!=="").map(x=>`<div class="info-item"><span class="label">${esc(x.label)}</span><span class="value">${esc(x.value)}</span></div>`).join("")}</div>`;}
@@ -44,3 +45,4 @@ export function section(title,content){return `<section class="section"><h2 clas
 export function kpis(items=[]){return `<div class="kpis">${items.map(x=>`<div class="kpi"><div class="kpi-label">${esc(x.label)}</div><div class="kpi-value">${esc(x.value)}</div></div>`).join("")}</div>`;}
 export function table(headers=[],rows=[]){return `<table><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${typeof c==="string"&&c.includes("<")?c:esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;}
 export {CSS};
+export { jsPDF, html2canvas };
