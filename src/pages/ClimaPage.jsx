@@ -1,150 +1,97 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../lib/AuthContext";
 
 const MOODS = [
-  { value: 5, emoji: "😄", label: "Ótimo" },
-  { value: 4, emoji: "🙂", label: "Bem" },
-  { value: 3, emoji: "😐", label: "Neutro" },
-  { value: 2, emoji: "🙁", label: "Mal" },
-  { value: 1, emoji: "😣", label: "Péssimo" },
+  { value: 5, emoji: "😄", label: "Ótimo", tone: "#18B77A" },
+  { value: 4, emoji: "🙂", label: "Bem", tone: "#52C85A" },
+  { value: 3, emoji: "😐", label: "Neutro", tone: "#F3B63F" },
+  { value: 2, emoji: "🙁", label: "Mal", tone: "#F0833C" },
+  { value: 1, emoji: "😣", label: "Péssimo", tone: "#D95A62" },
 ];
 
 export default function ClimaPage() {
-  const { company } = useAuth();
+  const { company, profile } = useAuth();
+  const role = profile?.access_role || "employee";
   const [employees, setEmployees] = useState([]);
   const [checkins, setCheckins] = useState([]);
-  const [surveys, setSurveys] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [checkinEmployeeId, setCheckinEmployeeId] = useState("");
-  const [surveyTitle, setSurveyTitle] = useState("");
-  const [savingSurvey, setSavingSurvey] = useState(false);
-
-  async function loadAll() {
-    setLoading(true);
-    setError("");
+  async function loadDashboard() {
+    if (!company?.id) return;
+    setLoading(true); setError("");
     try {
-      const [{ data: emp, error: e1 }, { data: ci, error: e2 }, { data: sv, error: e3 }] = await Promise.all([
-        supabase.from("employees").select("id, full_name").eq("status", "ativo").order("full_name"),
-        supabase.from("hr_climate_checkins").select("id, mood, checkin_date, employees:employee_id (full_name)").order("checkin_date", { ascending: false }).limit(30),
-        supabase.from("hr_climate_surveys").select("id, title, status, created_at").order("created_at", { ascending: false }),
-      ]);
-      const firstError = e1 || e2 || e3;
-      if (firstError) throw firstError;
-      setEmployees(emp ?? []);
-      setCheckins(ci ?? []);
-      setSurveys(sv ?? []);
+      let empQuery = supabase.from("employees").select("id, full_name, profile_id, manager_id").eq("company_id", company.id).eq("status", "ativo").order("full_name");
+      if (role === "gestor") empQuery = empQuery.eq("manager_id", profile.id);
+      const { data: emp, error: empError } = await empQuery;
+      if (empError) throw empError;
+      const ids = (emp || []).map(e => e.id);
+      if (!ids.length) { setEmployees([]); setCheckins([]); setLoading(false); return; }
+      const { data: ci, error: ciError } = await supabase.from("hr_climate_checkins").select("id, employee_id, mood, checkin_date").in("employee_id", ids).order("checkin_date", { ascending: false });
+      if (ciError) throw ciError;
+      setEmployees(emp || []); setCheckins(ci || []);
     } catch (err) {
-      setError("Não foi possível carregar: " + (err.message ?? "erro desconhecido"));
-    } finally {
-      setLoading(false);
-    }
+      setError("Não foi possível carregar o painel de clima: " + (err.message || "erro desconhecido"));
+    } finally { setLoading(false); }
   }
 
-  useEffect(() => { if (company?.id) loadAll(); }, [company?.id]);
+  useEffect(() => { loadDashboard(); }, [company?.id, profile?.id, role]);
 
-  async function doCheckin(mood) {
-    if (!checkinEmployeeId) { setError("Escolha o colaborador antes de marcar o humor."); return; }
-    setError("");
-    const { error: upsertError } = await supabase.from("hr_climate_checkins").upsert(
-      { company_id: company.id, employee_id: checkinEmployeeId, mood, checkin_date: new Date().toISOString().slice(0, 10) },
-      { onConflict: "employee_id,checkin_date" }
-    );
-    if (upsertError) { setError(upsertError.message); return; }
-    await loadAll();
-  }
+  const today = new Date().toISOString().slice(0, 10);
+  const latestByEmployee = useMemo(() => {
+    const map = new Map();
+    [...checkins].sort((a,b) => String(b.checkin_date).localeCompare(String(a.checkin_date))).forEach(c => { if (!map.has(c.employee_id)) map.set(c.employee_id, c); });
+    return map;
+  }, [checkins]);
+  const responded = latestByEmployee.size;
+  const total = employees.length;
+  const pending = Math.max(total - responded, 0);
+  const participation = total ? Math.round((responded / total) * 100) : 0;
+  const moodCounts = MOODS.map(m => ({ ...m, count: [...latestByEmployee.values()].filter(c => c.mood === m.value).length }));
+  const positive = moodCounts.filter(m => m.value >= 4).reduce((a,m) => a+m.count, 0);
+  const average = responded ? ([...latestByEmployee.values()].reduce((a,c) => a + Number(c.mood || 0), 0) / responded).toFixed(1) : "—";
+  const recentDays = useMemo(() => {
+    const days = [];
+    for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); const key = d.toISOString().slice(0,10); const values = checkins.filter(c => c.checkin_date === key); days.push({ label: d.toLocaleDateString("pt-BR", { weekday:"short" }).replace(".",""), value: values.length ? values.reduce((a,c)=>a+Number(c.mood||0),0)/values.length : 0 }); }
+    return days;
+  }, [checkins]);
 
-  async function createSurvey(e) {
-    e.preventDefault();
-    if (!surveyTitle) return;
-    setSavingSurvey(true);
-    await supabase.from("hr_climate_surveys").insert({ company_id: company.id, title: surveyTitle });
-    setSurveyTitle("");
-    setSavingSurvey(false);
-    await loadAll();
-  }
+  return <div>
+    <header style={styles.header}>
+      <div><div style={styles.eyebrow}>GESTÃO DE PESSOAS</div><h1 style={styles.title}>Clima Organizacional</h1><p style={styles.subtitle}>Visão consolidada do bem-estar e da percepção dos colaboradores. O check-in é opcional.</p></div>
+      <div style={styles.period}>Últimos 7 dias</div>
+    </header>
+    {error && <div style={styles.error}>{error}</div>}
+    {loading ? <div style={styles.loading}>Carregando indicadores...</div> : <>
+      <section style={styles.kpis}>
+        <Kpi icon="👥" label="Total de colaboradores" value={total} helper="ativos no escopo" />
+        <Kpi icon="✓" label="Responderam" value={`${responded} de ${total}`} helper={`${participation}% de participação`} accent="green" />
+        <Kpi icon="◷" label="Não responderam" value={`${pending} de ${total}`} helper="preenchimento não obrigatório" accent="amber" />
+        <Kpi icon="♥" label="Índice positivo" value={responded ? `${Math.round((positive/responded)*100)}%` : "—"} helper={`média de humor ${average}`} accent="blue" />
+      </section>
 
-  async function closeSurvey(id) {
-    await supabase.from("hr_climate_surveys").update({ status: "encerrada" }).eq("id", id);
-    await loadAll();
-  }
+      <section style={styles.grid}>
+        <Card title="Como todos estão se sentindo?" subtitle="Último registro disponível por colaborador">
+          <div style={styles.moodLayout}>
+            <div style={styles.donut}><div style={styles.donutInner}><strong>{participation}%</strong><span>participaram</span></div></div>
+            <div style={styles.moodList}>{moodCounts.map(m => <div key={m.value} style={styles.moodRow}><span style={styles.moodName}>{m.emoji} {m.label}</span><div style={styles.barTrack}><div style={{...styles.barFill,width:responded?`${(m.count/responded)*100}%`:"0%",background:m.tone}} /></div><b>{m.count}</b></div>)}</div>
+          </div>
+        </Card>
+        <Card title="Evolução do clima" subtitle="Média de humor nos últimos 7 dias">
+          <div style={styles.chart}>{recentDays.map((d,i)=><div key={i} style={styles.chartCol}><div style={styles.chartValue}>{d.value ? d.value.toFixed(1) : "—"}</div><div style={styles.chartTrack}><div style={{...styles.chartBar,height:d.value?`${Math.max(8,(d.value/5)*100)}%`:"4%"}} /></div><span>{d.label}</span></div>)}</div>
+        </Card>
+        <Card title="Leitura executiva" subtitle="Indicadores para acompanhamento do RH e gestão">
+          <div style={styles.insight}><span>Participação</span><b>{participation}%</b><small>{pending ? `${pending} ainda não responderam` : "Todos já responderam"}</small></div>
+          <div style={styles.insight}><span>Sentimento predominante</span><b>{moodCounts.slice().sort((a,b)=>b.count-a.count)[0]?.label || "Sem dados"}</b><small>com base nos registros disponíveis</small></div>
+          <div style={styles.insight}><span>Humor médio</span><b>{average}/5</b><small>quanto maior, melhor a percepção</small></div>
+        </Card>
+      </section>
 
-  return (
-    <div>
-      <header style={{ marginBottom: 20 }}>
-        <h1 style={styles.title}>Clima Organizacional</h1>
-        <p style={styles.subtitle}>Check-in de humor do dia + pesquisas de clima (anônimas).</p>
-      </header>
-
-      {error && <div style={styles.error}>{error}</div>}
-
-      <div style={styles.form}>
-        <p style={styles.formTitle}>Check-in de hoje</p>
-        <select style={styles.input} value={checkinEmployeeId} onChange={(e) => setCheckinEmployeeId(e.target.value)}>
-          <option value="">Escolha o colaborador...</option>
-          {employees.map((e) => <option key={e.id} value={e.id}>{e.full_name}</option>)}
-        </select>
-        <div style={styles.moodRow}>
-          {MOODS.map((m) => (
-            <button key={m.value} style={styles.moodBtn} onClick={() => doCheckin(m.value)} type="button" title={m.label}>
-              {m.emoji}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <h2 style={styles.title2}>Últimos check-ins</h2>
-      {loading ? (
-        <p style={styles.dim}>Carregando...</p>
-      ) : checkins.length === 0 ? (
-        <p style={styles.dim}>Nenhum check-in ainda.</p>
-      ) : (
-        <ul style={styles.list}>
-          {checkins.map((c) => (
-            <li key={c.id} style={styles.listItem}>
-              {MOODS.find((m) => m.value === c.mood)?.emoji} {c.employees?.full_name} — {new Date(c.checkin_date + "T00:00:00").toLocaleDateString("pt-BR")}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <h2 style={{ ...styles.title2, marginTop: 28 }}>Pesquisas de Clima</h2>
-      <form onSubmit={createSurvey} style={styles.surveyForm}>
-        <input style={styles.input} placeholder="Título da pesquisa" value={surveyTitle} onChange={(e) => setSurveyTitle(e.target.value)} />
-        <button style={styles.saveBtn} type="submit" disabled={savingSurvey}>+ Criar pesquisa</button>
-      </form>
-      {surveys.length === 0 ? (
-        <p style={styles.dim}>Nenhuma pesquisa criada ainda.</p>
-      ) : (
-        <ul style={styles.list}>
-          {surveys.map((s) => (
-            <li key={s.id} style={styles.listItem}>
-              {s.title} — {s.status === "aberta" ? "Aberta" : "Encerrada"}
-              {s.status === "aberta" && <button style={styles.smallBtn} onClick={() => closeSurvey(s.id)} type="button">Encerrar</button>}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
+      <section style={styles.notice}><span style={styles.noticeIcon}>🔒</span><div><strong>Visão agregada e respeitosa</strong><p>O painel apresenta resultados consolidados. O preenchimento não é obrigatório e o sistema não utiliza a ausência de resposta como indicador negativo.</p></div></section>
+    </>}
+  </div>;
 }
-
-const styles = {
-  title: { fontFamily: "var(--font-display)", fontSize: 22, margin: 0 },
-  title2: { fontFamily: "var(--font-display)", fontSize: 16, margin: "0 0 12px" },
-  subtitle: { color: "var(--text-dim)", fontSize: 13, margin: "6px 0 0" },
-  dim: { color: "var(--text-dim)", fontSize: 13 },
-  form: { display: "flex", flexDirection: "column", gap: 14, background: "var(--panel)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: 20, marginBottom: 28, maxWidth: 680 },
-  formTitle: { fontSize: 13, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.04em", margin: 0 },
-  input: { background: "var(--panel-2)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: "9px 10px", color: "var(--text)", fontSize: 13, flex: 1 },
-  moodRow: { display: "flex", gap: 10, justifyContent: "center" },
-  moodBtn: { fontSize: 32, background: "transparent", border: "none", cursor: "pointer", padding: 6, borderRadius: "var(--radius)" },
-  list: { listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6, maxWidth: 680 },
-  listItem: { background: "var(--panel)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: "10px 14px", fontSize: 13, display: "flex", justifyContent: "space-between", alignItems: "center" },
-  surveyForm: { display: "flex", gap: 8, marginBottom: 16, maxWidth: 680 },
-  saveBtn: { background: "var(--amber)", color: "#FFFFFF", border: "none", borderRadius: "var(--radius)", padding: "9px 16px", fontWeight: 700, fontSize: 12.5, cursor: "pointer", whiteSpace: "nowrap" },
-  smallBtn: { background: "transparent", border: "1px solid var(--line)", color: "var(--text-dim)", borderRadius: "var(--radius)", padding: "3px 10px", fontSize: 11, cursor: "pointer" },
-  error: { background: "rgba(217,105,95,0.12)", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--radius)", padding: "10px 12px", fontSize: 13, marginBottom: 16, maxWidth: 680 },
-};
+function Kpi({icon,label,value,helper,accent}){return <div style={styles.kpi}><div style={{...styles.kpiIcon,...(accent?styles[`kpi${accent}`]:{})}}>{icon}</div><div><span>{label}</span><strong>{value}</strong><small>{helper}</small></div></div>}
+function Card({title,subtitle,children}){return <section style={styles.card}><div style={styles.cardHead}><div><h2>{title}</h2><p>{subtitle}</p></div></div>{children}</section>}
+const styles={header:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:20,marginBottom:20},eyebrow:{fontSize:10,fontWeight:800,letterSpacing:".1em",color:"var(--text-dim)",marginBottom:5},title:{fontFamily:"var(--font-display)",fontSize:26,margin:0},subtitle:{color:"var(--text-dim)",fontSize:13,margin:"6px 0 0",maxWidth:700},period:{border:"1px solid var(--line)",background:"var(--panel)",borderRadius:999,padding:"8px 12px",fontSize:11.5,fontWeight:700,color:"var(--text-dim)"},kpis:{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:12,marginBottom:14},kpi:{display:"flex",gap:12,alignItems:"center",background:"var(--panel)",border:"1px solid var(--line)",borderRadius:16,padding:16,boxShadow:"0 6px 20px rgba(8,43,89,.05)"},kpiIcon:{width:38,height:38,borderRadius:12,display:"grid",placeItems:"center",background:"#EAF4FF",color:"#1267E8",fontSize:18,fontWeight:800},kpigreen:{background:"#E9FAF3",color:"#15966A"},kpiamber:{background:"#FFF7E5",color:"#B87A0A"},kpiblue:{background:"#EEF0FF",color:"#5A46C7"},kpi:{},grid:{display:"grid",gridTemplateColumns:"1.1fr 1.1fr .9fr",gap:14},card:{background:"var(--panel)",border:"1px solid var(--line)",borderRadius:18,padding:18,minWidth:0},cardHead:{marginBottom:14},cardHead h2:{},moodLayout:{display:"grid",gridTemplateColumns:"150px 1fr",gap:18,alignItems:"center"},donut:{width:142,height:142,borderRadius:"50%",background:"conic-gradient(#18B77A 0 48%, #52C85A 48% 70%, #F3B63F 70% 86%, #F0833C 86% 94%, #D95A62 94% 100%)",display:"grid",placeItems:"center",position:"relative"},donutInner:{width:100,height:100,borderRadius:"50%",background:"var(--panel)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"},moodList:{display:"flex",flexDirection:"column",gap:9},moodRow:{display:"grid",gridTemplateColumns:"105px 1fr 24px",gap:7,alignItems:"center",fontSize:11.5},moodName:{whiteSpace:"nowrap"},barTrack:{height:7,background:"var(--panel-2)",borderRadius:99,overflow:"hidden"},barFill:{height:"100%",borderRadius:99},chart:{height:190,display:"flex",alignItems:"stretch",gap:10,padding:"6px 4px 0"},chartCol:{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",gap:6},chartValue:{fontSize:10,fontWeight:800,color:"var(--text-dim)"},chartTrack:{height:135,width:"100%",display:"flex",alignItems:"flex-end",justifyContent:"center",background:"linear-gradient(to top, var(--line) 1px, transparent 1px) 0 100%/100% 33%",borderRadius:8},chartBar:{width:"70%",maxWidth:30,minHeight:4,borderRadius:"8px 8px 2px 2px",background:"linear-gradient(180deg,#1267E8,#18B7D7)"},insight:{padding:"12px 0",borderBottom:"1px solid var(--line)",display:"flex",flexDirection:"column",gap:3},insight:lastChild:{borderBottom:"none"},insight span:{fontSize:11,color:"var(--text-dim)"},insight b:{fontSize:18,fontFamily:"var(--font-display)"},insight small:{fontSize:10.5,color:"var(--text-dim)"},notice:{display:"flex",gap:12,alignItems:"flex-start",marginTop:14,padding:14,background:"#F5F9FF",border:"1px solid #DCEBFA",borderRadius:16},noticeIcon:{fontSize:18},notice strong:{fontSize:12.5},notice p:{margin:"4px 0 0",fontSize:11.5,color:"var(--text-dim)",lineHeight:1.5},loading:{padding:40,textAlign:"center",color:"var(--text-dim)"},error:{padding:12,background:"#FFF0F0",border:"1px solid #F4C4C4",color:"#A33A3A",borderRadius:12,marginBottom:14,fontSize:12.5}};
