@@ -1,30 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect,useState } from "react";
 import ModulePage from "../components/ModulePage";
 import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../lib/AuthContext";
 
-export default function CarreiraPage() {
-  const [employeeOptions, setEmployeeOptions] = useState(null);
-
-  useEffect(() => {
-    supabase.from("employees").select("id, full_name").eq("status", "ativo").order("full_name").then(({ data }) => {
-      setEmployeeOptions((data ?? []).map((e) => ({ value: e.id, label: e.full_name })));
-    });
-  }, []);
-
-  if (!employeeOptions) return null;
-
-  return (
-    <ModulePage
-      table="hr_career_plans"
-      title="Plano de Carreira"
-      subtitle="Pra onde cada colaborador pode crescer dentro da empresa."
-      emptyLabel="Nenhum plano de carreira cadastrado ainda."
-      fields={[
-        { key: "employee_id", label: "Colaborador", type: "select", options: employeeOptions, required: true },
-        { key: "current_role_title", label: "Cargo atual" },
-        { key: "target_role_title", label: "Cargo alvo" },
-        { key: "notes", label: "Observações" },
-      ]}
-    />
-  );
+export default function CarreiraPage(){
+ const {company,profile}=useAuth();const role=profile?.access_role||"employee";const canManage=["rh","dp","admin","master"].includes(role);
+ const [options,setOptions]=useState([]),[rows,setRows]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState("");
+ useEffect(()=>{if(!company?.id||!profile?.id)return;async function load(){let q=supabase.from("employees").select("id,full_name,profile_id,manager_id").eq("company_id",company.id).eq("status","ativo").order("full_name");if(role==="employee")q=q.eq("profile_id",profile.id);if(role==="gestor")q=q.eq("manager_id",profile.id);const {data,error}=await q;if(error)setError(error.message);else setOptions((data||[]).map(e=>({value:e.id,label:e.full_name})));}load()},[company?.id,profile?.id,role]);
+ useEffect(()=>{if(canManage||!company?.id||!options.length)return;async function load(){const {data,error}=await supabase.from("hr_career_plans").select("id,current_role_title,target_role_title,notes,employee_id").eq("company_id",company.id).in("employee_id",options.map(x=>x.value));if(error)setError(error.message);else setRows(data||[]);setLoading(false)}load()},[company?.id,canManage,options]);
+ if(canManage)return <ModulePage table="hr_career_plans" title="Plano de Carreira" subtitle="Pra onde cada colaborador pode crescer dentro da empresa." emptyLabel="Nenhum plano de carreira cadastrado ainda." fields={[{key:"employee_id",label:"Colaborador",type:"select",options,required:true},{key:"current_role_title",label:"Cargo atual"},{key:"target_role_title",label:"Cargo alvo"},{key:"notes",label:"Observações"}]}/>;
+ return <div><header style={s.header}><h1 style={s.title}>Minha Carreira</h1><p style={s.sub}>Acompanhe seu caminho de desenvolvimento profissional.</p></header>{error&&<div style={s.error}>{error}</div>}{loading?<p style={s.dim}>Carregando...</p>:rows.length===0?<p style={s.dim}>Nenhum plano de carreira registrado.</p>:<div style={s.list}>{rows.map(x=><article key={x.id} style={s.card}><div style={s.flow}><div><small>Cargo atual</small><strong>{x.current_role_title||"—"}</strong></div><span>→</span><div><small>Próximo cargo</small><strong>{x.target_role_title||"—"}</strong></div></div>{x.notes&&<p><b>Observações:</b> {x.notes}</p>}</article>)}</div>}</div>;
 }
+const s={header:{marginBottom:20},title:{fontFamily:"var(--font-display)",fontSize:22,margin:0},sub:{color:"var(--text-dim)",fontSize:13,margin:"6px 0 0"},list:{display:"grid",gap:12,maxWidth:900},card:{background:"var(--panel)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:18},flow:{display:"flex",alignItems:"center",gap:20},flowDiv:{display:"flex",flexDirection:"column"},dim:{color:"var(--text-dim)"},error:{padding:10,color:"var(--red)",border:"1px solid var(--red)",borderRadius:"var(--radius)"}};
