@@ -6,16 +6,57 @@
   --amber:#2563EB;--amber-dim:#DCE9FB;--green:#2F9E68;--red:#C9483D;--radius:8px;
   --font-display:"IBM Plex Mono","SFMono-Regular",Menlo,monospace;--font-body:"Inter",-apple-system,BlinkMacSystemFont,sans-serif;
 }
-*{box-sizing:border-box}html,body,#root{height:100%;margin:0}body{background:var(--ink);color:var(--text);font-family:var(--font-body);-webkit-font-smoothing:antialiased}
-button,input,select,textarea{font-family:inherit}a{color:inherit}::selection{background:var(--amber-dim);color:var(--text)}
+*{box-sizing:border-box}html,body,#root{height:100%;margin:0}body{background:var(--ink);color:var(--text);font-family:var(--font-body);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button,input,select,textarea{font-family:inherit;max-width:100%}a{color:inherit}::selection{background:var(--amber-dim);color:var(--text)}
 ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
 :focus-visible{outline:2px solid var(--amber);outline-offset:2px}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 .print-header,.print-footer,.print-only,.print-document{display:none}
 
 /* =========================================================
+   Responsividade global — desktop, tablet e celular
+   Todas as páginas devem se adaptar; componentes antigos que
+   usam grids/flex inline também recebem regras de segurança.
+   ========================================================= */
+img,svg,video,canvas{max-width:100%;height:auto}
+main,.app-main,.main-content,.content,.page-content{min-width:0;max-width:100%}
+[style*="grid-template-columns"],[style*="gridTemplateColumns"]{max-width:100%}
+table{max-width:100%}
+.table-responsive,.table-wrap,.table-container{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+@media (max-width:1100px){
+  .app-main,.main-content,.content,.page-content{width:100%;max-width:100%}
+  [style*="grid-template-columns"],[style*="gridTemplateColumns"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  [style*="display: flex"],[style*="display:flex"]{min-width:0}
+}
+
+@media (max-width:700px){
+  html,body,#root{width:100%;min-width:0}
+  body{font-size:14px}
+  .app-main,.main-content,.content,.page-content{padding-left:14px!important;padding-right:14px!important;width:100%!important;max-width:100%!important;overflow-x:hidden!important}
+  [style*="grid-template-columns"],[style*="gridTemplateColumns"]{grid-template-columns:minmax(0,1fr)!important}
+  [style*="width: 100vw"],[style*="width:100vw"]{width:100%!important}
+  [style*="min-width"]{min-width:0!important}
+  table{font-size:12px}
+  th,td{white-space:nowrap}
+  .table-responsive,.table-wrap,.table-container{margin-right:0;width:100%;overflow-x:auto}
+  h1{font-size:clamp(20px,6vw,28px)}
+  h2{font-size:clamp(18px,5vw,24px)}
+  h3{font-size:16px}
+  button{min-height:40px}
+  input,select,textarea{min-height:42px;width:100%;font-size:16px!important}
+  form{max-width:100%}
+  [role="dialog"],.modal,.dialog{width:min(100% - 20px,700px)!important;max-width:calc(100vw - 20px)!important;margin:10px!important}
+  .print-document{width:100%;padding:16px}
+}
+
+@media (max-width:420px){
+  .app-main,.main-content,.content,.page-content{padding-left:10px!important;padding-right:10px!important}
+  button{padding-left:12px!important;padding-right:12px!important}
+  th,td{padding:7px 8px!important}
+}
+
+/* =========================================================
    Impressão — padrão corporativo A4 ProdPersonal
-   A tela nunca é o documento: somente a área preparada para
-   impressão é enviada ao papel.
    ========================================================= */
 @media print{
   @page{size:A4 portrait;margin:14mm 14mm 17mm}
