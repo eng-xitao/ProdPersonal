@@ -27,7 +27,6 @@ import AvaliacaoComportamentalPage from "./pages/AvaliacaoComportamentalPage";
 import DescricaoCargosPage from "./pages/DescricaoCargosPage";
 import RemuneracaoPage from "./pages/RemuneracaoPage";
 import FeriasPage from "./pages/FeriasPage";
-import RescisaoPage from "./pages/RescisaoPage";
 
 function Guard({ children, allow }) {
   const { profile } = useAuth();
@@ -70,7 +69,7 @@ function PrivateArea() {
         {route("/feedbacks", <FeedbacksPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
         {route("/avaliacoes", <AvaliacoesPage />, ["rh", "dp", "admin", "master"])}
         {route("/avaliacao-experiencia", <AvaliacaoExperienciaPage />, ["rh", "dp", "admin", "master"])}
-        {route("/mural", <MuralPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
+        {route("/mural", <MuralPage />, ["gestor", "rh", "dp", "admin", "master"])}
         {route("/clima", <ClimaPage />, ["gestor", "rh", "dp", "admin", "master"])}
         {route("/denuncias", <DenunciasPage />, ["gestor", "rh", "admin", "master"])}
         {route("/sugestoes", <SugestoesPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
@@ -85,7 +84,6 @@ function PrivateArea() {
         {route("/vagas", <VagasPage />, ["rh", "dp", "admin", "master"])}
         {route("/remuneracao", <RemuneracaoPage />, ["rh", "dp", "admin", "master"])}
         {route("/ferias", <FeriasPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
-        {route("/rescisao", <RescisaoPage />, ["dp", "rh", "admin", "master"])}
         {route("/assinatura", <AssinaturaPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
