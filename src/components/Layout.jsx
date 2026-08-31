@@ -66,12 +66,8 @@ function removeDuplicateEmployeeName(root, fullName) {
     const greeting = text.startsWith("olá,") && text.includes(firstName);
     if (!exactName && !greeting) return;
 
-    // Evita deixar a identificação repetida no conteúdo. Em cartões de perfil,
-    // remove somente o bloco de identificação e preserva os KPIs/resultados ao lado.
-    if (exactName && el.tagName === "H2" && el.parentElement) {
-      el.parentElement.style.display = "none";
-      return;
-    }
+    // Mantém os indicadores e resultados do cartão; remove somente o elemento que
+    // repete o nome que já está no cabeçalho do Portal do Colaborador.
     el.style.display = "none";
   });
 }
