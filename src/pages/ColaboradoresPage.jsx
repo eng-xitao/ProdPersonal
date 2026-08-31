@@ -4,6 +4,12 @@ import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../lib/AuthContext";
 
 const CONTRACT_LABEL = { clt: "CLT", pj: "PJ", estagio: "Estágio", temporario: "Temporário", terceirizado: "Terceirizado" };
+function readableFunctionError(error, data) {
+  if (data?.error) return data.error;
+  if (!error) return "";
+  if (error.message && error.message !== "Edge Function returned a non-2xx status code") return error.message;
+  return "Não foi possível criar o acesso. Verifique a sessão e os dados do colaborador.";
+}
 
 export default function ColaboradoresPage() {
   const { company } = useAuth();
@@ -13,17 +19,13 @@ export default function ColaboradoresPage() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [accountSaving, setAccountSaving] = useState("");
-
   const emptyForm = { full_name: "", role: "", hire_date: "", contract_type: "clt", cpf: "", rg: "", email: "", phone: "", manager_id: "", base_salary: "", dependents_count: "", password: "" };
   const [form, setForm] = useState(emptyForm);
 
   async function loadAll() {
     setLoading(true); setError("");
-    try {
-      const { data, error: e } = await supabase.from("employees").select("id, full_name, role, status, hire_date, contract_type, manager_id, email, profile_id, access_status").order("full_name");
-      if (e) throw e;
-      setEmployees(data ?? []);
-    } catch (err) { setError("Não foi possível carregar: " + (err.message ?? "erro desconhecido")); }
+    try { const { data, error: e } = await supabase.from("employees").select("id, full_name, role, status, hire_date, contract_type, manager_id, email, profile_id, access_status").order("full_name"); if (e) throw e; setEmployees(data ?? []); }
+    catch (err) { setError("Não foi possível carregar: " + (err.message ?? "erro desconhecido")); }
     finally { setLoading(false); }
   }
   useEffect(() => { if (company?.id) loadAll(); }, [company?.id]);
@@ -37,10 +39,9 @@ export default function ColaboradoresPage() {
     const { data: newEmployee, error: insertError } = await supabase.from("employees").insert({ company_id: company.id, full_name: form.full_name, role: form.role || null, hire_date: form.hire_date || null, contract_type: form.contract_type, cpf: form.cpf || null, rg: form.rg || null, email: form.email || null, phone: form.phone || null, manager_id: form.manager_id || null, status: "ativo" }).select("id").single();
     if (insertError) { setError(insertError.message); setSaving(false); return; }
     if (form.base_salary) await supabase.from("hr_employee_compensation").insert({ company_id: company.id, employee_id: newEmployee.id, base_salary: Number(form.base_salary), dependents_count: Number(form.dependents_count) || 0, effective_date: form.hire_date || new Date().toISOString().slice(0, 10) });
-
     if (form.password) {
-      const { error: accountError } = await supabase.functions.invoke("create-employee-account", { body: { employeeId: newEmployee.id, email: form.email, password: form.password, fullName: form.full_name } });
-      if (accountError) setError("Colaborador criado, mas não foi possível criar o acesso: " + accountError.message);
+      const { data: accountData, error: accountError } = await supabase.functions.invoke("create-employee-account", { body: { employeeId: newEmployee.id, email: form.email, password: form.password, fullName: form.full_name } });
+      if (accountError || accountData?.error) setError("Colaborador criado, mas não foi possível criar o acesso: " + readableFunctionError(accountError, accountData));
     }
     setForm(emptyForm); setShowForm(false); setSaving(false); await loadAll();
   }
@@ -51,8 +52,8 @@ export default function ColaboradoresPage() {
     if (!password) return;
     if (password.length < 8) { setError("A senha deve ter pelo menos 8 caracteres."); return; }
     setAccountSaving(emp.id); setError("");
-    const { error: e } = await supabase.functions.invoke("create-employee-account", { body: { employeeId: emp.id, email: emp.email, password, fullName: emp.full_name } });
-    if (e) setError(e.message); else await loadAll();
+    const { data, error: e } = await supabase.functions.invoke("create-employee-account", { body: { employeeId: emp.id, email: emp.email, password, fullName: emp.full_name } });
+    if (e || data?.error) setError(readableFunctionError(e, data)); else await loadAll();
     setAccountSaving("");
   }
 
