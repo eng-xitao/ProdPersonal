@@ -20,10 +20,9 @@ export default function LoginPage() {
   return (
     <div style={styles.wrap}>
       <div style={styles.panel}>
-        <h1 style={styles.brand}>
-          Prod<span style={{ color: "var(--amber)" }}>Personal</span>
-        </h1>
-        <p style={styles.tagline}>Gestão de armazém e estoque — parte da plataforma ProdOS.</p>
+        <img src="/brand/prodpersonal-logo.svg" alt="ProdPersonal" style={styles.logo} />
+        <h1 style={styles.brand}>ProdPersonal</h1>
+        <p style={styles.tagline}>Gestão de pessoas integrada ao ecossistema ProdOS.</p>
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <label style={styles.field}>
@@ -51,15 +50,16 @@ export default function LoginPage() {
 }
 
 const styles = {
-  wrap: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)", padding: 20 },
-  panel: { background: "var(--panel)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: "40px 36px", maxWidth: 400, width: "100%" },
+  wrap: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--ink)", padding: 20 },
+  panel: { background: "var(--panel)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: "40px 36px", maxWidth: 400, width: "100%", textAlign: "center" },
+  logo: { width: 76, height: 76, display: "block", margin: "0 auto 16px" },
   brand: { fontFamily: "var(--font-display)", fontSize: 28, margin: "0 0 8px", fontWeight: 800 },
   tagline: { color: "var(--text-dim)", fontSize: 13, lineHeight: 1.5, margin: "0 0 24px" },
-  form: { display: "flex", flexDirection: "column", gap: 14 },
+  form: { display: "flex", flexDirection: "column", gap: 14, textAlign: "left" },
   field: { display: "flex", flexDirection: "column", gap: 6 },
   fieldLabel: { fontSize: 11, color: "var(--text-dim)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" },
   input: { background: "var(--panel-2)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: "10px 12px", color: "var(--text)", fontSize: 14 },
   submit: { background: "var(--amber)", color: "#FFFFFF", border: "none", borderRadius: "var(--radius)", padding: "12px 0", fontWeight: 700, fontSize: 14, cursor: "pointer", marginTop: 4 },
   error: { background: "rgba(217,105,95,0.12)", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--radius)", padding: "10px 12px", fontSize: 13 },
-  hint: { marginTop: 20, fontSize: 12, color: "var(--text-dim)", textAlign: "center", lineHeight: 1.5 },
+  hint: { marginTop: 20, fontSize: 12, color: "var(--text-dim)", lineHeight: 1.5 },
 };
