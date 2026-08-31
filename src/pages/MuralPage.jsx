@@ -4,6 +4,8 @@ import { useAuth } from "../lib/AuthContext";
 
 export default function MuralPage() {
   const { company, profile } = useAuth();
+  const role = profile?.access_role || "employee";
+  const isEmployee = role === "employee";
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -53,16 +55,16 @@ export default function MuralPage() {
     <div>
       <header style={{ marginBottom: 20 }}>
         <h1 style={styles.title}>Mural</h1>
-        <p style={styles.subtitle}>Avisos e comunicados pra toda a empresa.</p>
+        <p style={styles.subtitle}>{isEmployee ? "Avisos e comunicados publicados pela empresa." : "Avisos e comunicados pra toda a empresa."}</p>
       </header>
 
       {error && <div style={styles.error}>{error}</div>}
 
-      <form onSubmit={createPost} style={styles.form}>
+      {!isEmployee && <form onSubmit={createPost} style={styles.form}>
         <input style={styles.input} placeholder="Título do aviso" value={title} onChange={(e) => setTitle(e.target.value)} required />
         <textarea style={{ ...styles.input, minHeight: 70 }} placeholder="Conteúdo (opcional)" value={content} onChange={(e) => setContent(e.target.value)} />
         <button style={styles.saveBtn} type="submit" disabled={saving}>{saving ? "Publicando..." : "Publicar"}</button>
-      </form>
+      </form>}
 
       {loading ? (
         <p style={styles.dim}>Carregando...</p>
@@ -74,10 +76,10 @@ export default function MuralPage() {
             <div key={p.id} style={styles.card}>
               <div style={styles.cardHeader}>
                 <strong>{p.pinned && "📌 "}{p.title}</strong>
-                <div style={styles.cardActions}>
+                {!isEmployee && <div style={styles.cardActions}>
                   <button style={styles.smallBtn} onClick={() => togglePin(p.id, p.pinned)} type="button">{p.pinned ? "Desafixar" : "Fixar"}</button>
                   <button style={{ ...styles.smallBtn, color: "var(--red)" }} onClick={() => remove(p.id)} type="button">Excluir</button>
-                </div>
+                </div>}
               </div>
               {p.content && <p style={styles.dim}>{p.content}</p>}
               <p style={styles.date}>{new Date(p.created_at).toLocaleDateString("pt-BR")}</p>
