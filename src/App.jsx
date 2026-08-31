@@ -41,95 +41,52 @@ function Guard({ children, allow }) {
 
 function PrivateArea() {
   const { session, loading, profileLoading, subscription, profile } = useAuth();
-
-  if (loading || profileLoading) {
-    return <div style={{ padding: 40 }}>Carregando...</div>;
-  }
-
-  if (!session) {
-    return <Navigate to="/login" replace />;
-  }
-
-  const isActive =
-    !!profile?.platform_role ||
-    ["active", "vitalicio"].includes(subscription?.subscription_status);
-
-  const route = (path, element, allow = []) => (
-    <Route
-      path={path}
-      element={<Guard allow={allow}>{element}</Guard>}
-    />
-  );
-
-  if (!isActive) {
-    return (
-      <Layout>
-        <Routes>
-          <Route path="/assinatura" element={<AssinaturaPage />} />
-          <Route path="*" element={<PendingSubscriptionPage />} />
-        </Routes>
-      </Layout>
-    );
-  }
-
-  return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        {route("/dashboard", <DashboardPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
-        {route("/colaboradores", <ColaboradoresPage />, ["gestor", "rh", "dp", "admin", "master"])}
-        {route("/colaboradores/:id", <FichaColaboradorPage />, ["gestor", "rh", "dp", "admin", "master"])}
-        {route("/central-avaliacoes", <CentralAvaliacoesPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
-        {route("/comunicados", <ComunicadosPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
-        {route("/feedbacks", <FeedbacksPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
-        {route("/avaliacoes", <AvaliacoesPage />, ["rh", "dp", "admin", "master"])}
-        {route("/avaliacao-experiencia", <AvaliacaoExperienciaPage />, ["rh", "dp", "admin", "master"])}
-        {route("/mural", <MuralPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
-        {route("/clima", <ClimaPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
-        {route("/denuncias", <DenunciasPage />, ["rh", "dp", "admin", "master"])}
-        {route("/sugestoes", <SugestoesPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
-        {route("/avaliacao-comportamental", <AvaliacaoComportamentalPage />, ["rh", "dp", "admin", "master"])}
-        {route("/competencias", <CompetenciasPage />, ["rh", "dp", "admin", "master"])}
-        {route("/descricao-cargos", <DescricaoCargosPage />, ["rh", "dp", "admin", "master"])}
-        {route("/pdi", <PdiPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
-        {route("/metas", <MetasPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
-        {route("/carreira", <CarreiraPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
-        {route("/sucessao", <SucessaoPage />, ["rh", "dp", "admin", "master"])}
-        {route("/treinamentos", <TreinamentosPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
-        {route("/vagas", <VagasPage />, ["rh", "dp", "admin", "master"])}
-        {route("/remuneracao", <RemuneracaoPage />, ["rh", "dp", "admin", "master"])}
-        {route("/folha-pagamento", <FolhaPagamentoPage />, ["dp", "rh", "admin", "master"])}
-        {route("/ferias", <FeriasPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
-        {route("/rescisao", <RescisaoPage />, ["dp", "rh", "admin", "master"])}
-        {route("/config-inss", <ConfigInssPage />, ["dp", "rh", "admin", "master"])}
-        {route("/config-irrf", <ConfigIrrfPage />, ["dp", "rh", "admin", "master"])}
-        {route("/assinatura", <AssinaturaPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </Layout>
-  );
+  if (loading || profileLoading) return <div style={{ padding: 40 }}>Carregando...</div>;
+  if (!session) return <Navigate to="/login" replace />;
+  const isActive = !!profile?.platform_role || ["active", "vitalicio"].includes(subscription?.subscription_status);
+  const route = (path, element, allow = []) => <Route path={path} element={<Guard allow={allow}>{element}</Guard>} />;
+  if (!isActive) return <Layout><Routes><Route path="/assinatura" element={<AssinaturaPage />} /><Route path="*" element={<PendingSubscriptionPage />} /></Routes></Layout>;
+  return <Layout>
+    <Routes>
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      {route("/dashboard", <DashboardPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
+      {route("/colaboradores", <ColaboradoresPage />, ["gestor", "rh", "dp", "admin", "master"])}
+      {route("/colaboradores/:id", <FichaColaboradorPage />, ["gestor", "rh", "dp", "admin", "master"])}
+      {route("/central-avaliacoes", <CentralAvaliacoesPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
+      {route("/comunicados", <ComunicadosPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
+      {route("/feedbacks", <FeedbacksPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
+      {route("/avaliacoes", <AvaliacoesPage />, ["rh", "dp", "admin", "master"])}
+      {route("/avaliacao-experiencia", <AvaliacaoExperienciaPage />, ["rh", "dp", "admin", "master"])}
+      {route("/mural", <MuralPage />, ["gestor", "rh", "dp", "admin", "master"])}
+      {route("/clima", <ClimaPage />, ["gestor", "rh", "dp", "admin", "master"])}
+      {route("/denuncias", <DenunciasPage />, ["rh", "dp", "admin", "master"])}
+      {route("/sugestoes", <SugestoesPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
+      {route("/avaliacao-comportamental", <AvaliacaoComportamentalPage />, ["rh", "dp", "admin", "master"])}
+      {route("/competencias", <CompetenciasPage />, ["rh", "dp", "admin", "master"])}
+      {route("/descricao-cargos", <DescricaoCargosPage />, ["rh", "dp", "admin", "master"])}
+      {route("/pdi", <PdiPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
+      {route("/metas", <MetasPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
+      {route("/carreira", <CarreiraPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
+      {route("/sucessao", <SucessaoPage />, ["rh", "dp", "admin", "master"])}
+      {route("/treinamentos", <TreinamentosPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
+      {route("/vagas", <VagasPage />, ["rh", "dp", "admin", "master"])}
+      {route("/remuneracao", <RemuneracaoPage />, ["rh", "dp", "admin", "master"])}
+      {route("/folha-pagamento", <FolhaPagamentoPage />, ["dp", "rh", "admin", "master"])}
+      {route("/ferias", <FeriasPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
+      {route("/rescisao", <RescisaoPage />, ["dp", "rh", "admin", "master"])}
+      {route("/config-inss", <ConfigInssPage />, ["dp", "rh", "admin", "master"])}
+      {route("/config-irrf", <ConfigIrrfPage />, ["dp", "rh", "admin", "master"])}
+      {route("/assinatura", <AssinaturaPage />, ["employee", "gestor", "rh", "dp", "admin", "master"])}
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  </Layout>;
 }
 
 function RootRoutes() {
   const { session, loading } = useAuth();
-
-  return (
-    <Routes>
-      <Route
-        path="/login"
-        element={!loading && session ? <Navigate to="/" replace /> : <LoginPage />}
-      />
-      <Route path="/*" element={<PrivateArea />} />
-    </Routes>
-  );
+  return <Routes><Route path="/login" element={!loading && session ? <Navigate to="/" replace /> : <LoginPage />} /><Route path="/*" element={<PrivateArea />} /></Routes>;
 }
 
 export default function App() {
-  return (
-    <BrowserRouter>
-      <AuthProvider>
-        <RootRoutes />
-      </AuthProvider>
-    </BrowserRouter>
-  );
+  return <BrowserRouter><AuthProvider><RootRoutes /></AuthProvider></BrowserRouter>;
 }
