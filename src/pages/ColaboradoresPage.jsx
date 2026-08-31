@@ -13,7 +13,7 @@ export default function ColaboradoresPage() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const emptyForm = { full_name: "", role: "", hire_date: "", contract_type: "clt", cpf: "", rg: "", email: "", phone: "", manager_id: "" };
+  const emptyForm = { full_name: "", role: "", hire_date: "", contract_type: "clt", cpf: "", rg: "", email: "", phone: "", manager_id: "", base_salary: "", dependents_count: "" };
   const [form, setForm] = useState(emptyForm);
 
   async function loadAll() {
@@ -38,15 +38,26 @@ export default function ColaboradoresPage() {
     if (!form.full_name) { setError("Informe o nome completo."); return; }
     setSaving(true);
 
-    const { error: insertError } = await supabase.from("employees").insert({
+    const { data: newEmployee, error: insertError } = await supabase.from("employees").insert({
       company_id: company.id,
       full_name: form.full_name, role: form.role || null, hire_date: form.hire_date || null,
       contract_type: form.contract_type, cpf: form.cpf || null, rg: form.rg || null,
       email: form.email || null, phone: form.phone || null, manager_id: form.manager_id || null,
       status: "ativo",
-    });
+    }).select("id").single();
 
     if (insertError) { setError(insertError.message); setSaving(false); return; }
+
+    // Já cria a remuneração inicial — não precisa cadastrar de novo
+    // na tela de Remuneração, que fica só pra reajustes daqui pra frente.
+    if (form.base_salary) {
+      await supabase.from("hr_employee_compensation").insert({
+        company_id: company.id, employee_id: newEmployee.id,
+        base_salary: Number(form.base_salary), dependents_count: Number(form.dependents_count) || 0,
+        effective_date: form.hire_date || new Date().toISOString().slice(0, 10),
+      });
+    }
+
     setForm(emptyForm);
     setShowForm(false);
     setSaving(false);
@@ -100,8 +111,12 @@ export default function ColaboradoresPage() {
             <input style={styles.input} placeholder="E-mail" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} />
             <input style={styles.input} placeholder="Telefone" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} />
           </div>
+          <div style={styles.row}>
+            <input style={styles.input} type="number" step="0.01" placeholder="Salário base (R$)" value={form.base_salary} onChange={(e) => setForm((p) => ({ ...p, base_salary: e.target.value }))} />
+            <input style={styles.input} type="number" placeholder="Nº de dependentes (IRRF)" value={form.dependents_count} onChange={(e) => setForm((p) => ({ ...p, dependents_count: e.target.value }))} />
+          </div>
           <button style={styles.saveBtn} type="submit" disabled={saving}>{saving ? "Salvando..." : "Cadastrar"}</button>
-          <p style={styles.note}>CPF, RG, salário e outros dados sensíveis também podem ser completados depois, direto na ficha do colaborador.</p>
+          <p style={styles.note}>Salário e dependentes aqui já valem pra Folha, Férias e Rescisão — não precisa cadastrar de novo. Se o salário mudar depois (reajuste), registre isso na tela Remuneração.</p>
         </form>
       )}
 

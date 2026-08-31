@@ -17,7 +17,7 @@ export default function RemuneracaoPage() {
     <ModulePage
       table="hr_employee_compensation"
       title="Remuneração"
-      subtitle="Salário base de cada colaborador — a folha de pagamento usa esse valor."
+      subtitle="Registre aqui os reajustes — o salário inicial já é cadastrado direto na tela de Colaboradores."
       emptyLabel="Nenhuma remuneração cadastrada ainda."
       fields={[
         { key: "employee_id", label: "Colaborador", type: "select", options: employeeOptions, required: true },
