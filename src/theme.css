@@ -14,14 +14,20 @@ button,input,select,textarea{font-family:inherit;max-width:100%}a{color:inherit}
 
 /* =========================================================
    Responsividade global — desktop, tablet e celular
-   Todas as páginas devem se adaptar; componentes antigos que
-   usam grids/flex inline também recebem regras de segurança.
    ========================================================= */
 img,svg,video,canvas{max-width:100%;height:auto}
 main,.app-main,.main-content,.content,.page-content{min-width:0;max-width:100%}
 [style*="grid-template-columns"],[style*="gridTemplateColumns"]{max-width:100%}
-table{max-width:100%}
+
+/* Todas as tabelas recebem um contêiner de rolagem em telas estreitas.
+   O App.jsx cria .responsive-table automaticamente, inclusive para
+   tabelas de páginas antigas que não tinham wrapper. */
+.responsive-table{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;border-radius:var(--radius)}
+.responsive-table table{width:max-content;min-width:100%;max-width:none;border-collapse:collapse}
+.responsive-table th,.responsive-table td{vertical-align:middle}
+.responsive-table .table-actions{position:sticky;right:0;background:var(--panel)}
 .table-responsive,.table-wrap,.table-container{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.table-responsive table,.table-wrap table,.table-container table{width:max-content;min-width:100%;max-width:none}
 
 @media (max-width:1100px){
   .app-main,.main-content,.content,.page-content{width:100%;max-width:100%}
@@ -36,9 +42,10 @@ table{max-width:100%}
   [style*="grid-template-columns"],[style*="gridTemplateColumns"]{grid-template-columns:minmax(0,1fr)!important}
   [style*="width: 100vw"],[style*="width:100vw"]{width:100%!important}
   [style*="min-width"]{min-width:0!important}
+  .responsive-table,.table-responsive,.table-wrap,.table-container{width:100%;max-width:100%;overflow-x:auto;display:block}
+  .responsive-table table,.table-responsive table,.table-wrap table,.table-container table{width:max-content;min-width:100%;max-width:none}
   table{font-size:12px}
   th,td{white-space:nowrap}
-  .table-responsive,.table-wrap,.table-container{margin-right:0;width:100%;overflow-x:auto}
   h1{font-size:clamp(20px,6vw,28px)}
   h2{font-size:clamp(18px,5vw,24px)}
   h3{font-size:16px}
