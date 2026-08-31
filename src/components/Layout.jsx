@@ -1,4 +1,5 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { useAuth } from "../lib/AuthContext";
 
 const ADMIN_NAV = [
@@ -49,12 +50,45 @@ function navFor(role) {
   return ADMIN_NAV;
 }
 
+function removeDuplicateEmployeeName(root, fullName) {
+  if (!root || !fullName) return;
+  const normalized = String(fullName).trim().toLocaleLowerCase("pt-BR");
+  const firstName = normalized.split(/\s+/)[0];
+  if (!normalized) return;
+
+  const elements = root.querySelectorAll("h1,h2,h3,h4,h5,h6,strong,span,p,div");
+  elements.forEach((el) => {
+    if (el.closest(".employeeIdentity") || el.closest("select") || el.closest("option")) return;
+    const text = (el.textContent || "").trim().toLocaleLowerCase("pt-BR");
+    if (!text) return;
+
+    const exactName = text === normalized;
+    const greeting = text.startsWith("olá,") && text.includes(firstName);
+    if (!exactName && !greeting) return;
+
+    // Evita deixar a identificação repetida no conteúdo. Em cartões de perfil,
+    // remove somente o bloco de identificação e preserva os KPIs/resultados ao lado.
+    if (exactName && el.tagName === "H2" && el.parentElement) {
+      el.parentElement.style.display = "none";
+      return;
+    }
+    el.style.display = "none";
+  });
+}
+
 export default function Layout({ children }) {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const role = profile?.access_role || "employee";
   const nav = navFor(role);
   const isEmployee = role === "employee";
+
+  useEffect(() => {
+    if (!isEmployee || !profile?.full_name) return;
+    const timer = window.setTimeout(() => removeDuplicateEmployeeName(document.querySelector(".app-main"), profile.full_name), 0);
+    return () => window.clearTimeout(timer);
+  }, [isEmployee, profile?.full_name, location.pathname]);
 
   async function handleSignOut() {
     await signOut();
@@ -74,7 +108,7 @@ export default function Layout({ children }) {
       </aside>
       <main className="app-main" style={styles.main}>
         {isEmployee && (
-          <div className="no-print" style={styles.employeeIdentity}>
+          <div className="no-print employeeIdentity" style={styles.employeeIdentity}>
             <span style={styles.identityDot}>●</span>
             <strong>{profile?.full_name ?? profile?.email}</strong>
             <span style={styles.identityLabel}>Portal pessoal</span>
