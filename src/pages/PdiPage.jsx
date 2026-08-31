@@ -1,30 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect,useState } from "react";
 import ModulePage from "../components/ModulePage";
 import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../lib/AuthContext";
 
-export default function PdiPage() {
-  const [employeeOptions, setEmployeeOptions] = useState(null);
-
-  useEffect(() => {
-    supabase.from("employees").select("id, full_name").eq("status", "ativo").order("full_name").then(({ data }) => {
-      setEmployeeOptions((data ?? []).map((e) => ({ value: e.id, label: e.full_name })));
-    });
-  }, []);
-
-  if (!employeeOptions) return null;
-
-  return (
-    <ModulePage
-      table="hr_pdi"
-      title="PDI"
-      subtitle="Plano de Desenvolvimento Individual — ações concretas pra cada colaborador evoluir."
-      emptyLabel="Nenhum PDI cadastrado ainda."
-      statusField={{ key: "status", activeValue: "concluido", inactiveValue: "pendente", trueLabel: "Concluído", falseLabel: "Pendente" }}
-      fields={[
-        { key: "employee_id", label: "Colaborador", type: "select", options: employeeOptions, required: true },
-        { key: "action_description", label: "Ação de desenvolvimento", placeholder: "Ex: Curso de liderança, mentoria com gestor", required: true },
-        { key: "target_date", label: "Prazo", type: "date" },
-      ]}
-    />
-  );
+export default function PdiPage(){
+ const {company,profile}=useAuth(); const role=profile?.access_role||"employee"; const canManage=["rh","dp","admin","master"].includes(role);
+ const [options,setOptions]=useState([]),[rows,setRows]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState("");
+ useEffect(()=>{if(!company?.id)return;async function load(){setLoading(true);let q=supabase.from("employees").select("id,full_name,profile_id,manager_id").eq("company_id",company.id).eq("status","ativo").order("full_name");if(role==="gestor")q=q.eq("manager_id",profile.id);const {data,error}=await q;if(!error)setOptions((data||[]).map(e=>({value:e.id,label:e.full_name})));setLoading(false)}load()},[company?.id,role,profile?.id]);
+ useEffect(()=>{if(!company?.id||canManage)return;async function load(){let q=supabase.from("hr_pdi").select("id,action_description,target_date,status,employee_id").eq("company_id",company.id).order("target_date",{ascending:true});const {data,error}=await q;if(error)setError(error.message);else {let ids=options.map(x=>x.value);setRows((data||[]).filter(x=>ids.includes(x.employee_id)));}}load()},[company?.id,canManage,options]);
+ if(canManage)return <ModulePage table="hr_pdi" title="PDI" subtitle="Plano de Desenvolvimento Individual — ações concretas pra cada colaborador evoluir." emptyLabel="Nenhum PDI cadastrado ainda." statusField={{key:"status",activeValue:"concluido",inactiveValue:"pendente",trueLabel:"Concluído",falseLabel:"Pendente"}} fields={[{key:"employee_id",label:"Colaborador",type:"select",options:options,required:true},{key:"action_description",label:"Ação de desenvolvimento",placeholder:"Ex: Curso de liderança, mentoria com gestor",required:true},{key:"target_date",label:"Prazo",type:"date"}]}/>;
+ return <div><header style={s.header}><h1 style={s.title}>Meu PDI</h1><p style={s.sub}>Ações de desenvolvimento e acompanhamento.</p></header>{error&&<div style={s.error}>{error}</div>}{loading?<p style={s.dim}>Carregando...</p>:rows.length===0?<p style={s.dim}>Nenhuma ação de desenvolvimento registrada.</p>:<div style={s.list}>{rows.map(x=><article key={x.id} style={s.card}><p><b>Ação de desenvolvimento:</b> {x.action_description}</p><p><b>Prazo:</b> {x.target_date?new Date(x.target_date+"T00:00:00").toLocaleDateString("pt-BR"):"—"}</p><p><b>Status:</b> {x.status||"—"}</p></article>)}</div>}</div>;
 }
+const s={header:{marginBottom:20},title:{fontFamily:"var(--font-display)",fontSize:22,margin:0},sub:{color:"var(--text-dim)",fontSize:13,margin:"6px 0 0"},list:{display:"grid",gap:12,maxWidth:900},card:{background:"var(--panel)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:18},dim:{color:"var(--text-dim)"},error:{padding:10,color:"var(--red)",border:"1px solid var(--red)",borderRadius:"var(--radius)"}};
