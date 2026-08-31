@@ -13,6 +13,7 @@ import TreinamentosPage from "./pages/TreinamentosPage";
 import VagasPage from "./pages/VagasPage";
 import AssinaturaPage from "./pages/AssinaturaPage";
 import DashboardPage from "./pages/DashboardPage";
+import ColaboradoresPage from "./pages/ColaboradoresPage";
 import AvaliacaoComportamentalPage from "./pages/AvaliacaoComportamentalPage";
 import DescricaoCargosPage from "./pages/DescricaoCargosPage";
 import RemuneracaoPage from "./pages/RemuneracaoPage";
@@ -41,6 +42,7 @@ function PrivateArea() {
           <>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/colaboradores" element={<ColaboradoresPage />} />
             <Route path="/avaliacoes" element={<AvaliacoesPage />} />
             <Route path="/avaliacao-comportamental" element={<AvaliacaoComportamentalPage />} />
             <Route path="/competencias" element={<CompetenciasPage />} />
