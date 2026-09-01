@@ -106,7 +106,6 @@ function EmployeeInbox({ company, profile, session }) {
             <div><strong>{pendingCount}</strong><span>pendência(s) de leitura/ação</span></div>
             <div><strong>{submissions.length}</strong><span>documento(s) enviados ao RH</span></div>
           </section>
-
           <div style={styles.grid}>
             <section style={styles.card}>
               <div style={styles.cardHead}><div><h2 style={styles.sectionTitle}>📥 Recebidos do RH</h2><p style={styles.dim}>Leia os comunicados e responda quando houver aceite obrigatório.</p></div></div>
@@ -119,7 +118,6 @@ function EmployeeInbox({ company, profile, session }) {
                 </article>;
               })}
             </section>
-
             <section style={styles.card}>
               <h2 style={styles.sectionTitle}>📤 Enviar documento ao RH</h2>
               <p style={styles.dim}>Envie atestados, comprovantes, documentos pessoais ou qualquer arquivo solicitado pelo RH/DP.</p>
@@ -158,7 +156,6 @@ const styles = {
   sub: { color: "var(--text-dim)", fontSize: 13, margin: 0 },
   summary: { display: "grid", gridTemplateColumns: "repeat(2,minmax(180px,1fr))", gap: 12, marginBottom: 16 },
   summaryBox: {},
-  summary: { display: "grid", gridTemplateColumns: "repeat(2,minmax(180px,1fr))", gap: 12, marginBottom: 16 },
   grid: { display: "grid", gridTemplateColumns: "minmax(0,1.15fr) minmax(340px,.85fr)", gap: 16, alignItems: "start" },
   card: { background: "var(--panel)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: 18, marginBottom: 16 },
   sectionTitle: { fontFamily: "var(--font-display)", fontSize: 15, margin: "0 0 5px" },
@@ -177,7 +174,6 @@ const styles = {
   input: { width: "100%", boxSizing: "border-box", background: "var(--panel-2)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: "9px 10px", color: "var(--text)", fontSize: 13 },
   primaryBtn: { background: "var(--amber)", color: "#fff", border: 0, borderRadius: "var(--radius)", padding: "10px 14px", fontWeight: 700, cursor: "pointer" },
   subTitle: { fontSize: 13, margin: "22px 0 8px" },
-  submission: { display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid var(--line)" },
   submission: { display: "grid", gridTemplateColumns: "1fr auto auto", gap: 10, alignItems: "center", padding: "10px 0", borderBottom: "1px solid var(--line)" },
   linkBtn: { background: "transparent", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: "5px 9px", color: "var(--text)", fontSize: 11, cursor: "pointer" },
   statusSelect: { background: "var(--panel-2)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: "5px 8px", color: "var(--text)", fontSize: 11 },
