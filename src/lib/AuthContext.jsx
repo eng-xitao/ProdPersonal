@@ -2,12 +2,14 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 
 const AuthContext = createContext(null);
+const PRODUCT_KEY = "prodpersonal";
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [company, setCompany] = useState(null);
-  const [subscription, setSubscription] = useState(null); // assinatura do ProdLog especificamente
+  const [subscription, setSubscription] = useState(null);
+  const [productAccess, setProductAccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(true);
   const [impersonation, setImpersonation] = useState(null);
@@ -16,9 +18,6 @@ export function AuthProvider({ children }) {
     const { data: profileData } = await supabase.from("profiles").select("*").eq("id", userId).single();
     setProfile(profileData ?? null);
 
-    // A empresa "ativa" pode ser a própria, ou — se for equipe da
-    // plataforma personificando um cliente pra dar suporte — a
-    // empresa personificada. current_company_id() já resolve isso.
     const { data: activeCompanyId } = await supabase.rpc("current_company_id");
 
     if (activeCompanyId) {
@@ -29,13 +28,17 @@ export function AuthProvider({ children }) {
         .from("company_products")
         .select("*, plans:plan_id (name, price, features, included_users, extra_user_price)")
         .eq("company_id", activeCompanyId)
-        .eq("product_key", "prodpersonal")
+        .eq("product_key", PRODUCT_KEY)
         .maybeSingle();
       setSubscription(subData ?? null);
     } else {
       setCompany(null);
       setSubscription(null);
     }
+
+    // A autorização do produto é centralizada no ProdCore/Supabase.
+    const { data: hasAccess } = await supabase.rpc("has_product_access", { p_product_key: PRODUCT_KEY });
+    setProductAccess(hasAccess === true);
 
     if (profileData?.platform_role) {
       const { data: activeImpersonation } = await supabase
@@ -65,10 +68,6 @@ export function AuthProvider({ children }) {
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
 
-      // O navegador dispara esse evento de novo toda vez que a aba
-      // volta a ficar visível — mesmo sem o usuário ter mudado. Se já
-      // carregamos o perfil dessa mesma pessoa, não precisa recarregar
-      // do zero.
       if (session?.user && loadedUserId === session.user.id) {
         setLoading(false);
         return;
@@ -83,6 +82,7 @@ export function AuthProvider({ children }) {
         setProfile(null);
         setCompany(null);
         setSubscription(null);
+        setProductAccess(false);
         loadedUserId = null;
         setProfileLoading(false);
       }
@@ -102,7 +102,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, profile, company, subscription, loading, profileLoading, signIn, signOut, refreshCompany, impersonation, stopImpersonating }}>
+    <AuthContext.Provider value={{ session, profile, company, subscription, productAccess, loading, profileLoading, signIn, signOut, refreshCompany, impersonation, stopImpersonating }}>
       {children}
     </AuthContext.Provider>
   );
