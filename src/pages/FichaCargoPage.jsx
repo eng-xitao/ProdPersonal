@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../lib/AuthContext";
+import { openPrintWindow, infoGrid, section, table } from "../lib/printDocument";
 
-const TABS = ["Identificação", "Missão", "Atividades", "Requisitos", "Riscos (NR-1)", "EPIs (NR-6)", "Competências"];
+const TABS = ["Identificação", "Missão", "Atividades", "Ambiente de Trabalho", "Requisitos", "Riscos (NR-1)", "EPIs (NR-6)", "Competências"];
 const RISK_CATEGORIES = { fisico: "Físico", quimico: "Químico", biologico: "Biológico", ergonomico: "Ergonômico", acidente: "Acidente" };
 
 function EditableList({ table, jobId, companyId, items, onChange, placeholder }) {
@@ -153,6 +154,8 @@ export default function FichaCargoPage() {
     const { error: updateError } = await supabase.from("hr_job_descriptions").update({
       title: job.title, cbo_code: job.cbo_code, department: job.department, reports_to: job.reports_to,
       summary: job.summary, education_level: job.education_level, required_license: job.required_license,
+      work_environment_type: job.work_environment_type, work_shift: job.work_shift,
+      physical_conditions: job.physical_conditions, tools_used: job.tools_used,
     }).eq("id", id);
     setSaving(false);
     if (updateError) setError(updateError.message);
@@ -181,6 +184,53 @@ export default function FichaCargoPage() {
     setRequirements(data ?? []);
   }
 
+  const RISK_CATEGORY_LABEL = { fisico: "Físico", quimico: "Químico", biologico: "Biológico", ergonomico: "Ergonômico", acidente: "Acidente" };
+
+  function printJobDescription() {
+    const content = [
+      infoGrid([
+        { label: "Cargo", value: job.title },
+        { label: "Código CBO", value: job.cbo_code },
+        { label: "Departamento", value: job.department },
+        { label: "Superior direto", value: job.reports_to },
+      ]),
+      job.summary ? section("Missão / Objetivo do Cargo", `<p>${job.summary}</p>`) : "",
+      activities.length ? section("Descrição das Atividades", table(["#", "Atividade"], activities.map((a, i) => [String(i + 1), a.description]))) : "",
+      (job.work_environment_type || job.work_shift || job.physical_conditions || job.tools_used)
+        ? section("Ambiente de Trabalho", infoGrid([
+            { label: "Tipo de ambiente", value: job.work_environment_type },
+            { label: "Turno / jornada", value: job.work_shift },
+            { label: "Condições físicas", value: job.physical_conditions },
+            { label: "Ferramentas e equipamentos", value: job.tools_used },
+          ]))
+        : "",
+      (job.education_level || job.required_license || trainings.length)
+        ? section("Requisitos e Qualificações", infoGrid([
+            { label: "Escolaridade", value: job.education_level },
+            { label: "Habilitação", value: job.required_license },
+          ]) + (trainings.length ? table(["Treinamento obrigatório (NR)"], trainings.map((t) => [t.description])) : ""))
+        : "",
+      risks.length ? section("Riscos Ocupacionais (NR-1 / PGR)", table(["Categoria", "Risco"], risks.map((r) => [RISK_CATEGORY_LABEL[r.category] ?? r.category, r.description]))) : "",
+      ppe.length ? section("Medidas de Proteção — EPIs/EPCs (NR-6)", table(["Equipamento de proteção"], ppe.map((p) => [p.description]))) : "",
+      requirements.length ? section("Competências Exigidas", table(["Competência", "Nível exigido"], requirements.map((r) => [r.hr_competencies?.name ?? "", String(r.required_level)]))) : "",
+      section("Assinaturas", `
+        <div class="signature-area">
+          <div class="signature">Colaborador (ciente)</div>
+          <div class="signature">Gestor / Superior direto</div>
+          <div class="signature">RH / DP</div>
+        </div>
+      `),
+    ].join("");
+
+    openPrintWindow({
+      title: "Descrição de Cargo",
+      subtitle: `${job.title}${job.department ? " — " + job.department : ""}`,
+      company: company?.name,
+      content,
+      documentCode: `CARGO-${String(id).slice(0, 8).toUpperCase()}`,
+    });
+  }
+
   if (loading) return <p style={styles.dim}>Carregando...</p>;
   if (error && !job) return <div style={styles.error}>{error}</div>;
   if (!job) return <p style={styles.dim}>Cargo não encontrado.</p>;
@@ -196,7 +246,10 @@ export default function FichaCargoPage() {
           <h1 style={styles.title}>{job.title || "Novo cargo"}</h1>
           <p style={styles.subtitle}>{job.department || "Sem departamento"}{job.cbo_code ? ` · CBO ${job.cbo_code}` : ""}</p>
         </div>
-        <button style={styles.deleteBtn} onClick={deleteJob} type="button">Excluir cargo</button>
+        <div style={styles.headerActions}>
+          <button style={styles.printBtn} onClick={printJobDescription} type="button">🖨 Imprimir ficha completa</button>
+          <button style={styles.deleteBtn} onClick={deleteJob} type="button">Excluir cargo</button>
+        </div>
       </header>
 
       {error && <div style={styles.error}>{error}</div>}
@@ -232,6 +285,16 @@ export default function FichaCargoPage() {
           </>
         )}
 
+        {activeTab === "Ambiente de Trabalho" && (
+          <div style={styles.form}>
+            <FieldSelect label="Tipo de ambiente" value={job.work_environment_type} onChange={(v) => saveField("work_environment_type", v)} options={["", "Interno (fábrica/escritório)", "Externo (campo/rua)", "Misto"]} />
+            <FieldSelect label="Turno / Jornada" value={job.work_shift} onChange={(v) => saveField("work_shift", v)} options={["", "Diurno", "Noturno", "Revezamento (turnos)", "Escala 12x36"]} />
+            <FieldArea label="Condições físicas do ambiente" value={job.physical_conditions} onChange={(v) => saveField("physical_conditions", v)} placeholder="Ex: Temperatura elevada, ruído moderado, iluminação artificial" />
+            <FieldArea label="Ferramentas e equipamentos utilizados" value={job.tools_used} onChange={(v) => saveField("tools_used", v)} placeholder="Ex: Empilhadeira elétrica, coletor de dados, EPI padrão" />
+            <button style={styles.saveBtn} onClick={persistJob} disabled={saving} type="button">{saving ? "Salvando..." : "Salvar"}</button>
+          </div>
+        )}
+
         {activeTab === "Requisitos" && (
           <div>
             <div style={styles.form}>
@@ -260,27 +323,38 @@ export default function FichaCargoPage() {
 
         {activeTab === "Competências" && (
           <div>
+            <p style={styles.sectionNote}>Nível exigido de 0 a 10 — usado pra calcular o gap automático na Avaliação de Desempenho.</p>
             {requirements.length === 0 ? (
               <p style={styles.dim}>Nenhuma competência vinculada ainda.</p>
             ) : (
-              <ul style={styles.itemList}>
+              <div style={styles.competencyList}>
                 {requirements.map((r) => (
-                  <li key={r.id} style={styles.itemRow}>
-                    <span style={{ flex: 1 }}>{r.hr_competencies?.name} — nível exigido {r.required_level}</span>
-                    <button style={styles.removeBtn} onClick={() => removeCompetency(r.id)} type="button">✕</button>
-                  </li>
+                  <div key={r.id} style={styles.competencyRow}>
+                    <div style={styles.competencyHead}>
+                      <span>{r.hr_competencies?.name}</span>
+                      <div style={styles.competencyHeadRight}>
+                        <b>{r.required_level}</b>
+                        <button style={styles.removeBtn} onClick={() => removeCompetency(r.id)} type="button">✕</button>
+                      </div>
+                    </div>
+                    <div style={styles.competencyTrack}><div style={{ ...styles.competencyFill, width: `${Number(r.required_level) * 10}%` }} /></div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
-            <div style={styles.addRow}>
+            <div style={styles.addCompetencyBox}>
               <select style={styles.input} value={addingCompetencyId} onChange={(e) => setAddingCompetencyId(e.target.value)}>
-                <option value="">Adicionar competência...</option>
+                <option value="">Escolha uma competência pra adicionar...</option>
                 {availableCompetencies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
-              <select style={{ ...styles.input, maxWidth: 100 }} value={addingLevel} onChange={(e) => setAddingLevel(Number(e.target.value))}>
-                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => <option key={n} value={n}>{n}</option>)}
-              </select>
-              <button style={styles.addBtn} onClick={addCompetency} type="button">+ Adicionar</button>
+              {addingCompetencyId && (
+                <div style={styles.sliderRow}>
+                  <span style={styles.dim}>Nível exigido</span>
+                  <input type="range" min="0" max="10" value={addingLevel} onChange={(e) => setAddingLevel(Number(e.target.value))} style={{ flex: 1 }} />
+                  <b>{addingLevel}</b>
+                </div>
+              )}
+              <button style={styles.addBtn} onClick={addCompetency} type="button" disabled={!addingCompetencyId}>+ Adicionar competência</button>
             </div>
           </div>
         )}
@@ -294,6 +368,17 @@ function Field({ label, value, onChange, placeholder }) {
     <label style={styles.fieldLabel}>
       {label}
       <input style={styles.input} value={value ?? ""} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+    </label>
+  );
+}
+
+function FieldSelect({ label, value, onChange, options }) {
+  return (
+    <label style={styles.fieldLabel}>
+      {label}
+      <select style={styles.input} value={value ?? ""} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => <option key={o} value={o}>{o || "Selecione..."}</option>)}
+      </select>
     </label>
   );
 }
@@ -313,6 +398,8 @@ const styles = {
   title: { fontFamily: "var(--font-display)", fontSize: 24, margin: 0 },
   subtitle: { color: "var(--text-dim)", fontSize: 13, margin: "6px 0 0" },
   deleteBtn: { background: "transparent", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--radius)", padding: "8px 16px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" },
+  headerActions: { display: "flex", gap: 10, flexWrap: "wrap" },
+  printBtn: { background: "var(--panel-2)", border: "1px solid var(--line)", color: "var(--text)", borderRadius: "var(--radius)", padding: "8px 16px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" },
   dim: { color: "var(--text-dim)", fontSize: 13 },
   tabBar: { display: "flex", gap: 4, borderBottom: "1px solid var(--line)", marginBottom: 20, flexWrap: "wrap" },
   tabBtn: { background: "transparent", border: "none", borderBottom: "2px solid transparent", padding: "8px 12px", fontSize: 12.5, fontWeight: 600, color: "var(--text-dim)", cursor: "pointer" },
@@ -330,5 +417,13 @@ const styles = {
   addRow: { display: "flex", gap: 8 },
   addBtn: { background: "var(--panel-2)", border: "1px solid var(--line)", color: "var(--text)", borderRadius: "var(--radius)", padding: "9px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" },
   riskCategoryLabel: { fontSize: 11, fontWeight: 800, color: "var(--red)", textTransform: "uppercase", letterSpacing: "0.03em", margin: "0 0 6px" },
+  competencyList: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 },
+  competencyRow: { background: "var(--panel)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: "12px 16px" },
+  competencyHead: { display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, marginBottom: 8 },
+  competencyHeadRight: { display: "flex", alignItems: "center", gap: 10 },
+  competencyTrack: { height: 6, background: "var(--panel-2)", borderRadius: 3, overflow: "hidden" },
+  competencyFill: { height: "100%", background: "var(--amber)" },
+  addCompetencyBox: { background: "var(--panel)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: 16, display: "flex", flexDirection: "column", gap: 12 },
+  sliderRow: { display: "flex", alignItems: "center", gap: 10, fontSize: 13 },
   error: { background: "rgba(217,105,95,0.12)", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--radius)", padding: "10px 12px", fontSize: 13, marginBottom: 16, maxWidth: 700 },
 };
