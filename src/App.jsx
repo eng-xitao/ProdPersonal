@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
-import LoginPage from "./pages/LoginPage";
+import LoginPage from "./pages/LoginPageStandard";
 import PendingSubscriptionPage from "./pages/PendingSubscriptionPage";
 import Layout from "./components/Layout";
 import PrintBranding from "./components/PrintBranding";
