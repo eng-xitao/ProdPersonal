@@ -124,7 +124,34 @@ export default function ColaboradoresPage() {
     </div>
 
     {loading ? <p style={styles.muted}>Carregando...</p> : filtered.length === 0 ? <p style={styles.muted}>Nenhum colaborador encontrado com esse filtro.</p> : <>
-      <div style={styles.tableWrap}><table style={styles.table}><thead><tr><th>Nome</th><th>Cargo / posição</th><th>Equipe</th><th>Gestor principal</th><th>Acesso</th><th>Status</th><th>Ações</th></tr></thead><tbody>{paginated.map(e=><tr key={e.id}><td><Link to={`/colaboradores/${e.id}`} style={styles.link}>{e.full_name}</Link></td><td>{e.role || "—"}<small style={styles.sub}>{POSITION_LABEL[e.hierarchy_position] || "Colaborador"}</small></td><td>{teamName(e.team_id)}</td><td>{managerName(e.manager_id)}</td><td>{e.access_status === "ativo" ? <span style={styles.ok}>● {ACCESS_LABEL[e.access_role] || "Ativo"}</span> : canAdminister ? <button style={styles.small} onClick={()=>createAccount(e)}>Criar acesso</button> : <span style={styles.muted}>Sem acesso</span>}</td><td><button style={styles.status} onClick={()=>toggleStatus(e)} disabled={!canAdminister}>{e.status === "ativo" ? "Ativo" : "Inativo"}</button></td><td>{canAdminister && <button style={styles.edit} onClick={()=>openEdit(e)}>✎ Editar</button>}</td></tr>)}</tbody></table></div>
+      <div style={styles.list}>
+        {paginated.map(e => (
+          <div key={e.id} style={{ ...styles.row2, ...(e.status !== "ativo" ? styles.rowInactive : {}) }}>
+            <div style={styles.avatar}>{e.full_name.slice(0, 1).toUpperCase()}</div>
+            <div style={styles.identity}>
+              <Link to={`/colaboradores/${e.id}`} style={styles.link}>{e.full_name}</Link>
+              <span style={styles.identitySub}>{e.role || "Cargo não informado"}{e.department ? ` · ${e.department}` : ""}</span>
+            </div>
+            <div style={styles.colHierarchy}>
+              <span style={styles.pillNeutral}>{POSITION_LABEL[e.hierarchy_position] || "Colaborador"}</span>
+              <span style={styles.colHint}>{teamName(e.team_id) !== "—" ? teamName(e.team_id) : ""}</span>
+            </div>
+            <div style={styles.colManager}>
+              <span style={styles.colLabel}>Gestor</span>
+              <span>{managerName(e.manager_id)}</span>
+            </div>
+            <div style={styles.colAccess}>
+              {e.access_status === "ativo"
+                ? <span style={styles.pillGreen}>● {ACCESS_LABEL[e.access_role] || "Ativo"}</span>
+                : canAdminister ? <button style={styles.small} onClick={() => createAccount(e)} type="button">Criar acesso</button> : <span style={styles.muted}>Sem acesso</span>}
+            </div>
+            <button style={e.status === "ativo" ? styles.pillGreenBtn : styles.pillMutedBtn} onClick={() => toggleStatus(e)} disabled={!canAdminister} type="button">
+              {e.status === "ativo" ? "Ativo" : "Inativo"}
+            </button>
+            {canAdminister && <button style={styles.edit} onClick={() => openEdit(e)} type="button">✎ Editar</button>}
+          </div>
+        ))}
+      </div>
       {totalPages > 1 && <div style={styles.pagination}>
         <button style={styles.pageBtn} onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1}>← Anterior</button>
         <span style={styles.pageInfo}>Página {page} de {totalPages} · {filtered.length} colaborador(es)</span>
@@ -143,4 +170,19 @@ search:{flex:1,minWidth:220,background:"var(--panel)",border:"1px solid var(--li
 filterSelect:{background:"var(--panel)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:"10px 12px",color:"var(--text)",fontSize:13,minWidth:170},
 pagination:{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,marginTop:14,flexWrap:"wrap"},
 pageBtn:{background:"var(--panel)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:"8px 14px",color:"var(--text)",fontSize:12.5,fontWeight:700,cursor:"pointer"},
-pageInfo:{fontSize:12,color:"var(--text-dim)"},table:{width:"100%",borderCollapse:"collapse",fontSize:12},link:{color:"var(--text)",fontWeight:700,textDecoration:"none"},sub:{display:"block",color:"var(--text-dim)",fontSize:10,marginTop:3},ok:{color:"var(--green)",fontSize:11,fontWeight:700},small:{background:"var(--green)",color:"#fff",border:0,borderRadius:7,padding:"6px 9px",cursor:"pointer",fontSize:11},edit:{background:"transparent",color:"var(--amber)",border:"1px solid var(--line)",borderRadius:7,padding:"6px 9px",cursor:"pointer",fontWeight:700},status:{background:"transparent",border:0,color:"var(--green)",fontWeight:700,cursor:"pointer"}};
+pageInfo:{fontSize:12,color:"var(--text-dim)"},
+list:{display:"flex",flexDirection:"column",gap:8},
+row2:{display:"flex",alignItems:"center",gap:14,background:"var(--panel)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:"12px 16px",flexWrap:"wrap"},
+rowInactive:{opacity:0.6},
+avatar:{width:38,height:38,borderRadius:10,background:"var(--panel-2)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:14,color:"var(--amber)",flexShrink:0},
+identity:{display:"flex",flexDirection:"column",gap:2,minWidth:160,flex:"1 1 200px"},
+identitySub:{fontSize:11.5,color:"var(--text-dim)"},
+colHierarchy:{display:"flex",flexDirection:"column",gap:4,minWidth:120},
+colManager:{display:"flex",flexDirection:"column",gap:2,minWidth:130,fontSize:12.5},
+colLabel:{fontSize:10,fontWeight:700,color:"var(--text-dim)",textTransform:"uppercase",letterSpacing:"0.03em"},
+colHint:{fontSize:11,color:"var(--text-dim)"},
+colAccess:{minWidth:130},
+pillNeutral:{display:"inline-block",width:"fit-content",fontSize:10.5,fontWeight:700,background:"var(--panel-2)",color:"var(--text-dim)",borderRadius:999,padding:"3px 9px"},
+pillGreen:{color:"var(--green)",fontSize:11.5,fontWeight:700},
+pillGreenBtn:{background:"transparent",border:"1px solid var(--green)",color:"var(--green)",borderRadius:999,padding:"5px 12px",fontWeight:700,fontSize:11.5,cursor:"pointer"},
+pillMutedBtn:{background:"transparent",border:"1px solid var(--line)",color:"var(--text-dim)",borderRadius:999,padding:"5px 12px",fontWeight:700,fontSize:11.5,cursor:"pointer"},table:{width:"100%",borderCollapse:"collapse",fontSize:12},link:{color:"var(--text)",fontWeight:700,textDecoration:"none"},sub:{display:"block",color:"var(--text-dim)",fontSize:10,marginTop:3},ok:{color:"var(--green)",fontSize:11,fontWeight:700},small:{background:"var(--green)",color:"#fff",border:0,borderRadius:7,padding:"6px 9px",cursor:"pointer",fontSize:11},edit:{background:"transparent",color:"var(--amber)",border:"1px solid var(--line)",borderRadius:7,padding:"6px 9px",cursor:"pointer",fontWeight:700},status:{background:"transparent",border:0,color:"var(--green)",fontWeight:700,cursor:"pointer"}};
