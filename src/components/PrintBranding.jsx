@@ -21,7 +21,6 @@ export default function PrintBranding({ title = "Documento" }) {
           .pp-print-header img { width: 145px; height: auto; object-fit: contain; }
           .pp-print-header div { margin-left: auto; text-align: right; }
           .pp-print-header strong { display: block; font-size: 10pt; }
-          .pp-print-header span { display: block; margin-top: 2px; font-size: 7.5pt; color: #718096; }
           .pp-print-footer {
             display: flex !important;
             position: fixed;
@@ -47,11 +46,11 @@ export default function PrintBranding({ title = "Documento" }) {
       `}</style>
       <div className="pp-print-header" aria-hidden="true">
         <img src="/brand/prodpersonal-logo.svg" alt="ProdPersonal" />
-        <div><strong>{title}</strong><span>Gestão de Pessoas • Ecossistema ProdOS</span></div>
+        <div><strong>{title}</strong></div>
       </div>
       <div className="pp-print-footer" aria-hidden="true">
         <img src="/brand/prodpersonal-logo.svg" alt="ProdPersonal" />
-        <span>ProdPersonal • Gestão de Pessoas • Documento gerado pelo sistema</span>
+        <span>ProdPersonal</span>
         <span className="pp-print-page">Página</span>
       </div>
     </>
